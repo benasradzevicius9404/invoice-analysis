@@ -1,0 +1,11 @@
+﻿@using System;
+@using Analyzers;
+
+<TimeEntriesImport ImportedEntries="ImportedEntries" Entries="@Entries"></TimeEntriesImport>
+
+@code {
+    [Parameter]
+    public EventCallback<List<TimeEntry>> ImportedEntries { get; set; }
+    [Parameter]
+    public List<TimeEntry> Entries { get; set; }
+}

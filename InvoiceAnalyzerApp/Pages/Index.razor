@@ -1,0 +1,73 @@
+﻿@using System;
+@using Compiler;
+@using Lexer.LexicalAnalysis;
+@using Lexer.SyntaxAnalysis;
+@using Analyzers;
+@using Analyzers.Analyzers;
+@using Models;
+
+@page "/"
+
+<div class="text-center mt-3">
+    <span class="display-1 mx-5 @(ActiveStep != 1 ? "text-muted" : "")">1</span>
+    <span class="display-1 mx-5 @(ActiveStep != 2 ? "text-muted" : "")">2</span>
+    <span class="display-1 mx-5 @(ActiveStep != 3 ? "text-muted" : "")">3</span>
+</div>
+<div class="text-center mb-5">
+    <span class="text-muted">@(ActiveStep switch { 1 => "Import time entries", 2 => "Define analyzer", 3 => "Review results" })</span>
+</div>
+
+@if (ActiveStep == 1)
+{
+    <div class="row">
+        <div class="col-6 offset-3">
+            <InvoiceAnalyzerApp.Shared.Steps.ImportStep Entries="@timeEntries" ImportedEntries="(entries) => timeEntries = entries"></InvoiceAnalyzerApp.Shared.Steps.ImportStep>
+            <button class="btn btn-primary btn-block mt-2" disabled="@(!timeEntries.Any())" @onclick="() => { ActiveStep = 2; }">Continue (@(timeEntries.Count()))</button>
+        </div>
+    </div>
+}
+else if (ActiveStep == 2)
+{
+    <div class="row">
+        <div class="col-6 offset-3">
+            <InvoiceAnalyzerApp.Shared.Steps.AnalyzerStep AnalyzersUpdated="(c) => analyzers = c.ToArray()" Analyzers="analyzers"></InvoiceAnalyzerApp.Shared.Steps.AnalyzerStep>
+            <div class="row mt-2">
+                <div class="col-6">
+                    <button class="btn btn-primary btn-block" @onclick="() => ActiveStep = 1">Back</button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-primary btn-block" disabled="@(!analyzers.Any())" @onclick="() => { ActiveStep = 3; }">Analyze</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-10 offset-1">
+            <button class="btn btn-primary btn-block mb-2" @onclick="() => ActiveStep = 2">Back</button>
+            <InvoiceAnalyzerApp.Shared.Steps.ResultsStep 
+                                                         Analyzers="analyzers" 
+                                                         TimeEntries="timeEntries" 
+                                                         HiddenEntries="hiddenEntries" 
+                                                         HiddenEntriesChanged="(e) => hiddenEntries = new HashSet<TimeEntry>(e)"
+                                                         StarredEntries="starredEntries" 
+                                                         StarredEntriesChanged="(e) => starredEntries = new HashSet<TimeEntry>(e)"
+                                                         ></InvoiceAnalyzerApp.Shared.Steps.ResultsStep>
+        </div>
+    </div>
+}
+
+@code {
+    private string sourceCode = "";
+
+    private List<TimeEntry> timeEntries = new List<TimeEntry>();
+    private HashSet<TimeEntry> hiddenEntries = new HashSet<TimeEntry>();
+    private HashSet<TimeEntry> starredEntries = new HashSet<TimeEntry>();
+    private NamedAnalyzerModel[] analyzers = new NamedAnalyzerModel[0];
+
+    private int ActiveStep = 1;
+
+
+}

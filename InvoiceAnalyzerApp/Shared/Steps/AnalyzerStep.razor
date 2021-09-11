@@ -1,0 +1,124 @@
+﻿@using Compiler;
+@using Lexer.LexicalAnalysis;
+@using Lexer.SyntaxAnalysis;
+@using Analyzers.Analyzers;
+@using Models;
+@using System;
+
+
+<div class="row">
+    <div class="col-3">
+        <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+            @foreach (var analyzer in analyzers)
+            {
+                <a class="mb-2 nav-link @(activeAnalyzer == analyzer.Key ? "active" : null)" href="#" role="tab" aria-controls="v-pills-home"
+                   aria-selected="@(activeAnalyzer == analyzer.Key ? "true" : "false")" @onclick="() => activeAnalyzer = analyzer.Key">@analyzer.Key</a>
+            }
+            <a class="nav-link" href="#" role="tab" aria-controls="v-pills-home" aria-selected="false" @onclick="Add">+ ADD</a>
+        </div>
+    </div>
+    <div class="col-9">
+        <div class="row mb-2">
+            <div class="col-8"><input @onchange="e => Rename(e.Value.ToString())" value="@activeAnalyzer" class="form-control" /></div>
+            <div class="col-4"><button class="btn btn-danger" @onclick="Remove" disabled="@(analyzers.Count > 1 ? null : true)">Remove Analyzer</button></div>
+        </div>
+        
+        <p class="mb-2"><b>Available analyzers: </b>@(string.Join(", ", availableAnalyzers.OrderBy(x => x)))</p>
+
+        <EditableAnalyzer ParsedAnalyzer="ParsedAnalyzer" Changed="Changed" />
+
+        @if (error != null)
+        {
+            <p>
+                Syntax Error: @error.Error
+            </p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyCollection<NamedAnalyzerModel> Analyzers { get; set; }
+
+    [Parameter]
+    public EventCallback<IEnumerable<NamedAnalyzerModel>> AnalyzersUpdated { get; set; }
+
+    private ParsedAnalyzerModel ParsedAnalyzer => analyzers[activeAnalyzer].Parsed;
+
+    private Dictionary<string, AnalyzerModel> analyzers = new Dictionary<string, AnalyzerModel>();
+    private string activeAnalyzer = null;
+
+    private MainCompiler compiler = new MainCompiler();
+    private SyntaxParser parser = new SyntaxParser();
+    private SyntaxError error = null;
+
+    private string[] availableAnalyzers;
+
+    private async Task Changed(ParsedAnalyzerModel parsedAnalyzer)
+    {
+        var result = parser.Parse(parsedAnalyzer.Tokens);
+
+        if (result.HasError)
+        {
+            error = result.Error;
+            analyzers[activeAnalyzer] = new AnalyzerModel(parsedAnalyzer, null);
+        }
+        else
+        {
+            analyzers[activeAnalyzer] = new AnalyzerModel(parsedAnalyzer, compiler.Compile(result.Node) as IAnalyzer);
+            error = null;
+        }
+
+        await AnalyzersUpdated.InvokeAsync(analyzers.Select(x => new NamedAnalyzerModel(x.Key, x.Value)));
+    }
+
+    protected async Task Remove()
+    {
+        if(analyzers.Count == 1)
+        {
+            return;
+        }
+
+        analyzers.Remove(activeAnalyzer);
+        activeAnalyzer = analyzers.First().Key;
+
+        await AnalyzersUpdated.InvokeAsync(analyzers.Select(x => new NamedAnalyzerModel(x.Key, x.Value)));
+    }
+
+    protected async Task Add()
+    {
+        var name = Guid.NewGuid().ToString();
+        analyzers.Add(name, new AnalyzerModel(new ParsedAnalyzerModel("", new Token[0]), null));
+        activeAnalyzer = name;
+
+        await AnalyzersUpdated.InvokeAsync(analyzers.Select(x => new NamedAnalyzerModel(x.Key, x.Value)));
+    }
+
+    protected async Task Rename(string name)
+    {
+        analyzers[name] = analyzers[activeAnalyzer];
+        analyzers.Remove(activeAnalyzer);
+        activeAnalyzer = name;
+
+        await AnalyzersUpdated.InvokeAsync(analyzers.Select(x => new NamedAnalyzerModel(x.Key, x.Value)));
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        availableAnalyzers = AppDomain.CurrentDomain.GetAssemblies().SelectMany(x => x.GetTypes())
+                .Where(x => typeof(IAnalyzer).IsAssignableFrom(x) && !x.IsInterface && !x.IsAbstract)
+                .Select(x => x.Name).ToArray();
+
+        if (!(Analyzers?.Any() ?? false))
+        {
+            analyzers["default"] = new AnalyzerModel(new ParsedAnalyzerModel("", new Token[0]), null);
+            await AnalyzersUpdated.InvokeAsync(analyzers.Select(x => new NamedAnalyzerModel(x.Key, x.Value)));
+        }
+        else
+        {
+            analyzers = Analyzers.ToDictionary(x => x.Name, x => x.Analyzer);
+        }
+
+        activeAnalyzer = analyzers.First().Key;
+    }
+}

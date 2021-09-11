@@ -1,0 +1,264 @@
+﻿@using System;
+@using Analyzers;
+@using Analyzers.Analyzers;
+@using Models;
+
+<nav class="nav nav-pills flex-column flex-sm-row mb-2">
+    <a class="flex-sm-fill text-sm-center nav-link @(activeTab == 0 ? "active" : null)" href="#" @onclick="() => activeTab = 0">Entries</a>
+    <a class="flex-sm-fill text-sm-center nav-link @(activeTab == 1 ? "active" : null)" href="#" @onclick="() => activeTab = 1">Hidden Entries (@(HiddenEntries.Count()))</a>
+    <a class="flex-sm-fill text-sm-center nav-link @(activeTab == 2 ? "active" : null)" href="#" @onclick="() => activeTab = 2">Starred Entries (@(StarredEntries.Count()))</a>
+</nav>
+
+@if (activeTab == 0)
+{
+    @if (orderBy != null)
+    {
+        <p class="mb-2">Order by: @orderBy.Value.Field @(orderBy.Value.Asc ? "ASC" : "DESC")</p>
+    }
+    else
+    {
+        <p class="mb-2">Order by: nothing</p>
+    }
+
+    <table class="table small table-hover">
+        <thead>
+        <th><a href="#" @onclick='(() => Sort("Date"))'>Date</a></th>
+        <th>
+            <a href="#" @onclick='(() => Sort("Quantity"))'>
+                Amount
+            </a>
+        </th>
+        <th><a href="#" @onclick='(() => Sort("Task"))'>Task</a></th>
+        <th><a href="#" @onclick='(() => Sort("Project"))'>Project</a></th>
+        <th><a href="#" @onclick='(() => Sort("Employee"))'>Employee</a></th>
+        <th><a href="#" @onclick='(() => Sort("Description"))'>Description</a></th>
+        @foreach (var analyzer in Analyzers)
+        {
+            <th><a href="#" @onclick='(() => Sort($"Analyzer.{analyzer.Name}"))'>@analyzer.Name</a></th>
+        }
+        <th>Actions</th>
+        </thead>
+        <tbody>
+            @foreach (var item in GetSorted().Where(s => !HiddenEntries.Contains(s.Entry) && !StarredEntries.Contains(s.Entry)))
+            {
+                <tr>
+                    <td>@item.Entry.Date.ToShortDateString()</td>
+                    <td>@item.Entry.Quantity</td>
+                    <td>@item.Entry.Task</td>
+                    <td>@item.Entry.Project</td>
+                    <td>@item.Entry.Employee</td>
+                    <td>@item.Entry.Description</td>
+                    @foreach (var analysisResult in item.AnalysisResults)
+                    {
+                        <td class="@(analysisResult.Value.Matched ? "bg-success text-white" : null)">@analysisResult.Value.MatchedPart</td>
+                    }
+                    <td>
+                        <button class="btn btn-outline-warning" @onclick="() => Hide(item.Entry)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-slash-fill" viewBox="0 0 16 16">
+                                <path d="m10.79 12.912-1.614-1.615a3.5 3.5 0 0 1-4.474-4.474l-2.06-2.06C.938 6.278 0 8 0 8s3 5.5 8 5.5a7.029 7.029 0 0 0 2.79-.588zM5.21 3.088A7.028 7.028 0 0 1 8 2.5c5 0 8 5.5 8 5.5s-.939 1.721-2.641 3.238l-2.062-2.062a3.5 3.5 0 0 0-4.474-4.474L5.21 3.089z" />
+                                <path d="M5.525 7.646a2.5 2.5 0 0 0 2.829 2.829l-2.83-2.829zm4.95.708-2.829-2.83a2.5 2.5 0 0 1 2.829 2.829zm3.171 6-12-12 .708-.708 12 12-.708.708z" />
+                            </svg>
+                        </button>
+                        <button class="btn btn-outline-warning" @onclick="() => Star(item.Entry)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-star" viewBox="0 0 16 16">
+                                <path d="M2.866 14.85c-.078.444.36.791.746.593l4.39-2.256 4.389 2.256c.386.198.824-.149.746-.592l-.83-4.73 3.522-3.356c.33-.314.16-.888-.282-.95l-4.898-.696L8.465.792a.513.513 0 0 0-.927 0L5.354 5.12l-4.898.696c-.441.062-.612.636-.283.95l3.523 3.356-.83 4.73zm4.905-2.767-3.686 1.894.694-3.957a.565.565 0 0 0-.163-.505L1.71 6.745l4.052-.576a.525.525 0 0 0 .393-.288L8 2.223l1.847 3.658a.525.525 0 0 0 .393.288l4.052.575-2.906 2.77a.565.565 0 0 0-.163.506l.694 3.957-3.686-1.894a.503.503 0 0 0-.461 0z" />
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (activeTab == 1)
+{
+    <table class="table small table-hover">
+        <thead>
+        <th><a href="#">Date</a></th>
+        <th>
+            <a href="#">
+                Amount
+            </a>
+        </th>
+        <th><a href="#">Task</a></th>
+        <th><a href="#">Project</a></th>
+        <th><a href="#">Employee</a></th>
+        <th><a href="#">Description</a></th>
+        <th>Actions</th>
+        </thead>
+        <tbody>
+            @foreach (var item in HiddenEntries)
+            {
+                <tr>
+                    <td>@item.Date.ToShortDateString()</td>
+                    <td>@item.Quantity</td>
+                    <td>@item.Task</td>
+                    <td>@item.Project</td>
+                    <td>@item.Employee</td>
+                    <td>@item.Description</td>
+                    <td>
+                        <button class="btn btn-outline-warning" @onclick="() => Unhide(item)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye-fill" viewBox="0 0 16 16">
+                                <path d="M10.5 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" />
+                                <path d="M0 8s3-5.5 8-5.5S16 8 16 8s-3 5.5-8 5.5S0 8 0 8zm8 3.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (activeTab == 2)
+{
+    <table class="table small table-hover">
+        <thead>
+        <th><a href="#" @onclick='(() => Sort("Date"))'>Date</a></th>
+        <th>
+            <a href="#" @onclick='(() => Sort("Quantity"))'>
+                Amount
+            </a>
+        </th>
+        <th><a href="#" @onclick='(() => Sort("Task"))'>Task</a></th>
+        <th><a href="#" @onclick='(() => Sort("Project"))'>Project</a></th>
+        <th><a href="#" @onclick='(() => Sort("Employee"))'>Employee</a></th>
+        <th><a href="#" @onclick='(() => Sort("Description"))'>Description</a></th>
+        @foreach (var analyzer in Analyzers)
+        {
+            <th><a href="#" @onclick='(() => Sort($"Analyzer.{analyzer.Name}"))' style="min-width:100px">@analyzer.Name</a></th>
+        }
+        <th>Actions</th>
+        </thead>
+        <tbody>
+            @foreach (var item in GetSorted().Where(s => StarredEntries.Contains(s.Entry)))
+            {
+                <tr>
+                    <td>@item.Entry.Date.ToShortDateString()</td>
+                    <td>@item.Entry.Quantity</td>
+                    <td>@item.Entry.Task</td>
+                    <td>@item.Entry.Project</td>
+                    <td>@item.Entry.Employee</td>
+                    <td>@item.Entry.Description</td>
+                    @foreach (var analysisResult in item.AnalysisResults)
+                    {
+                        <td class="@(analysisResult.Value.Matched ? "bg-success text-white" : null)">@analysisResult.Value.MatchedPart</td>
+                    }
+                    <td>
+                        <button class="btn btn-outline-warning" @onclick="() => Unstar(item.Entry)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-star-fill" viewBox="0 0 16 16">
+                                <path d="M3.612 15.443c-.386.198-.824-.149-.746-.592l.83-4.73L.173 6.765c-.329-.314-.158-.888.283-.95l4.898-.696L7.538.792c.197-.39.73-.39.927 0l2.184 4.327 4.898.696c.441.062.612.636.282.95l-3.522 3.356.83 4.73c.078.443-.36.79-.746.592L8 13.187l-4.389 2.256z" />
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [Parameter]
+    public IEnumerable<TimeEntry> TimeEntries { get; set; } = new List<TimeEntry>();
+
+    [Parameter]
+    public IEnumerable<TimeEntry> HiddenEntries { get; set; } = new List<TimeEntry>();
+
+    [Parameter]
+    public EventCallback<List<TimeEntry>> HiddenEntriesChanged { get; set; }
+
+    [Parameter]
+    public IEnumerable<TimeEntry> StarredEntries { get; set; } = new List<TimeEntry>();
+
+    [Parameter]
+    public EventCallback<List<TimeEntry>> StarredEntriesChanged { get; set; }
+
+    [Parameter]
+    public IEnumerable<NamedAnalyzerModel> Analyzers { get; set; } = new List<NamedAnalyzerModel>();
+
+    private int activeTab = 0;
+
+    private List<(TimeEntry Entry, Dictionary<string, AnalyzerResult> AnalysisResults)> analyzed;
+
+    private (string Field, bool Asc)? orderBy = null;
+
+    private IEnumerable<(TimeEntry Entry, Dictionary<string, AnalyzerResult> AnalysisResults)> GetAnalyzed()
+    {
+        foreach (var entry in TimeEntries)
+        {
+            var analysisResults = Analyzers.ToDictionary(x => x.Name, x => x.Analyzer.Compiled.Analyze(entry));
+            yield return (entry, analysisResults);
+        }
+    }
+
+    private IEnumerable<(TimeEntry Entry, Dictionary<string, AnalyzerResult> AnalysisResults)> GetSorted()
+    {
+        if (orderBy == null)
+        {
+            return analyzed;
+        }
+
+        switch (orderBy.Value.Field)
+        {
+            case "Date":
+                return orderBy.Value.Asc ? analyzed.OrderBy(x => x.Entry.Date) : analyzed.OrderByDescending(x => x.Entry.Date);
+            case "Quantity":
+                return orderBy.Value.Asc ? analyzed.OrderBy(x => x.Entry.Quantity) : analyzed.OrderByDescending(x => x.Entry.Quantity);
+            case "Task":
+                return orderBy.Value.Asc ? analyzed.OrderBy(x => x.Entry.Task) : analyzed.OrderByDescending(x => x.Entry.Task);
+            case "Project":
+                return orderBy.Value.Asc ? analyzed.OrderBy(x => x.Entry.Project) : analyzed.OrderByDescending(x => x.Entry.Project);
+            case "Employee":
+                return orderBy.Value.Asc ? analyzed.OrderBy(x => x.Entry.Employee) : analyzed.OrderByDescending(x => x.Entry.Employee);
+            case "Description":
+                return orderBy.Value.Asc ? analyzed.OrderBy(x => x.Entry.Description) : analyzed.OrderByDescending(x => x.Entry.Description);
+            default:
+                var analyzerName = orderBy.Value.Field.Split('.')[1];
+                return orderBy.Value.Asc ? analyzed.OrderBy(x => x.AnalysisResults[analyzerName].MatchedPart) : analyzed.OrderByDescending(x => x.AnalysisResults[analyzerName].MatchedPart);
+        }
+    }
+
+    private async Task Hide(TimeEntry entry)
+    {
+        await HiddenEntriesChanged.InvokeAsync(HiddenEntries.Concat(new[] { entry }).ToList());
+    }
+
+    private async Task Unhide(TimeEntry entry)
+    {
+        await HiddenEntriesChanged.InvokeAsync(HiddenEntries.Except(new[] { entry }).ToList());
+    }
+
+    private async Task Star(TimeEntry entry)
+    {
+        await StarredEntriesChanged.InvokeAsync(StarredEntries.Concat(new[] { entry }).ToList());
+    }
+
+    private async Task Unstar(TimeEntry entry)
+    {
+        await StarredEntriesChanged.InvokeAsync(StarredEntries.Except(new[] { entry }).ToList());
+    }
+
+    private void Sort(string field)
+    {
+        if (orderBy?.Field == field)
+        {
+            if (orderBy.Value.Asc)
+            {
+                orderBy = (field, false);
+            }
+            else
+            {
+                orderBy = null;
+            }
+        }
+        else
+        {
+            orderBy = (field, true);
+        }
+    }
+
+    protected override Task OnInitializedAsync()
+    {
+        analyzed = GetAnalyzed().ToList();
+        return Task.CompletedTask;
+    }
+}

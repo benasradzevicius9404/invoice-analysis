@@ -1,0 +1,79 @@
+﻿@using Analyzers;
+
+@if (editMode)
+{
+    <textarea class="form-control" style="height: 400px;font-family: Consolas,monospace;" 
+              @onfocusout="(async () => { await Import(); editMode = false; })" 
+              @bind-value="importCsv" @bind-value:event="oninput">@importCsv</textarea>
+}
+else
+{
+    <div style="overflow: auto; max-height: 300px">
+        <table class="table small">
+            <thead>
+            <th>Date</th>
+            <th>
+                Amount
+            </th>
+            <th>Task</th>
+            <th>Project</th>
+            <th>Employee</th>
+            <th>Description</th>
+            </thead>
+            <tbody>
+                @foreach (var item in Entries)
+                {
+                    <tr>
+                        <td>@item.Date.ToShortDateString()</td>
+                        <td>@item.Quantity</td>
+                        <td>@item.Task</td>
+                        <td>@item.Project</td>
+                        <td>@item.Employee</td>
+                        <td>@item.Description</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <button class="btn btn-outline-primary btn-block mt-2" @onclick="(() => editMode = true)">Edit</button>
+}
+
+@code {
+    [Parameter]
+    public List<TimeEntry> Entries { get; set; }
+
+    [Parameter]
+    public EventCallback<List<TimeEntry>> ImportedEntries { get; set; }
+
+    private bool editMode = true;
+    private string importCsv = @"";
+
+    public async Task Import()
+    {
+        Console.WriteLine(importCsv);
+        await ImportedEntries.InvokeAsync(importCsv
+            .Split(Environment.NewLine)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Skip(1)
+            .Select(x => x.Split('\t'))
+            .Select(x =>
+            {
+                return new TimeEntry(decimal.Parse(x[2]), DateTime.Parse(x[5]), x[6], x[7], x[8], x[9]);
+            })
+            .ToList());
+    }
+
+    protected override Task OnInitializedAsync()
+    {
+        editMode = !Entries.Any();
+        if(!Entries.Any())
+        {
+            importCsv = @"Quantity	Amount	Type	Date	Project	Task/Item	Employee	Notes/Description
+1	85.00	1.00	85.00	Time	6/2/2021	Project X	Design	John Smith	Demo
+2	85.00	1.00	85.00	Time	7/1/2021	Project X	Project Management	John Smith	internal retro
+3	85.00	0.50	42.50	Time	7/1/2021	Project X	Project Management	John Smith	client refinement
+4	85.00	0.75	63.75	Time	7/1/2021	Project X	Project Management	John Smith	Site Config Design and Catalog Tile View Design Proposals";
+        }
+        return Task.CompletedTask;
+    }
+}

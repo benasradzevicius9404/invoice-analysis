@@ -1,0 +1,34 @@
+﻿@using Analyzers.Analyzers;
+
+<table class="table small table-hover">
+    <thead>
+        <th>Date</th>
+        <th>
+            Amount
+        </th>
+        <th>Task</th>
+        <th>Project</th>
+        <th>Employee</th>
+        <th>Description</th>
+        <th>Matched Reason</th>
+    </thead>
+    <tbody>
+        @foreach (var item in Results)
+        {
+        <tr>
+            <td>@item.Entry.Date.ToShortDateString()</td>
+            <td>@item.Entry.Quantity</td>
+            <td>@item.Entry.Task</td>
+            <td>@item.Entry.Project</td>
+            <td>@item.Entry.Employee</td>
+            <td>@item.Entry.Description</td>
+            <td>@item.MatchedPart</td>
+        </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter]
+    public IEnumerable<AnalyzerResult> Results { get; set; } = new AnalyzerResult[0];
+}

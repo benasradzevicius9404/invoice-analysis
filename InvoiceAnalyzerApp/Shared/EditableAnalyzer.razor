@@ -1,0 +1,47 @@
+﻿@using InvoiceAnalyzerApp.Services;
+@using System;
+@using Lexer.LexicalAnalysis;
+@using Models;
+
+@if (editMode)
+{
+    <textarea class=" form-control" @onchange="async e => { await Input(e.Value.ToString()); }" @onfocusout="(() => editMode = false)" style="height: 400px;font-family: Consolas,monospace;">@ParsedAnalyzer.SourceCode</textarea>
+}
+else
+{
+    <div style="border: 1px solid gray; position: relative; border-radius: .25rem;" class="p-2">
+        @if (string.IsNullOrEmpty(htmlHighlighted.Value))
+        {
+            <p>No analyzer</p>
+        }
+        else
+        {
+            <pre style="font-size: 12px;">
+                @htmlHighlighted
+            </pre>
+        }
+        <button class="btn btn-outline-primary btn-sm" style="position: absolute; top: .5rem; right: .5rem;" @onclick="(() => editMode = true)">Edit</button>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public ParsedAnalyzerModel ParsedAnalyzer { get; set; }
+
+    [Parameter]
+    public EventCallback<ParsedAnalyzerModel> Changed { get; set; }
+
+    private IEnumerable<Token> tokens => (!string.IsNullOrEmpty(ParsedAnalyzer.SourceCode) ? tokenizer.Tokenize(grammer, ParsedAnalyzer.SourceCode) : new Token[0]);
+    private MarkupString htmlHighlighted => highlighter.Highlight(ParsedAnalyzer.SourceCode, tokens);
+
+    private Grammer grammer = Grammer.Default();
+    private Tokenizer tokenizer = new Tokenizer();
+    private CodeHighlighter highlighter = new CodeHighlighter();
+    private bool editMode = false;
+
+    private async Task Input(string code)
+    {
+        var tokens = tokenizer.Tokenize(grammer, code).ToList();
+        await Changed.InvokeAsync(new ParsedAnalyzerModel(code, tokens));
+    }
+}
